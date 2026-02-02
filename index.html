@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnbuckle Tool | Light Edition</title>
+    <style>
+        :root {
+            --primary: #4f46e5; /* Indigo */
+            --secondary: #ec4899; /* Pink */
+            --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #fbcfe8 100%);
+            --card-bg: rgba(255, 255, 255, 0.8);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: #1f2937;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 0;
+            margin: 0;
+            overflow-y: auto;
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 380px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 6px;
+            margin-left: 4px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 1rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        #result-box {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px dashed #d1d5db;
+        }
+
+        #result {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .diagram-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            height: 60px;
+        }
+
+        .rod {
+            height: 10px;
+            width: 60px;
+            background: linear-gradient(to bottom, #bdc3c7, #2c3e50); /* 3D metallic effect */
+            border-radius: 5px;
+        }
+
+        .coupler {
+            height: 30px;
+            width: 100px;
+            background: linear-gradient(to bottom, #95a5a6, #34495e);
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .failure-zone {
+            width: 5px;
+            height: 100%;
+            background: transparent;
+            transition: background 0.5s ease;
+        }
+
+        /* Glow effect when failure is calculated */
+        .is-failing {
+            background: rgba(236, 72, 153, 0.8) !important;
+            box-shadow: 0 0 15px #ec4899;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #e5e7eb; /* Default Grey */
+            color: #6b7280;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* Green Status */
+        .badge-safe {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #166534;
+            box-shadow: 0 0 10px rgba(22, 101, 52, 0.2);
+        }
+
+        /* Red Status */
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #991b1b;
+            box-shadow: 0 0 10px rgba(153, 27, 27, 0.2);
+        }
+        .meter-container {
+            width: 100%;
+            height: 12px;
+            background-color: #e5e7eb; /* Grey background */
+            border-radius: 6px;
+            margin-top: 15px;
+            overflow: hidden; /* Ensures the fill doesn't spill out */
+            box-shadow: inner 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .meter-fill {
+            height: 100%;
+            width: 0%; /* Starts empty */
+            background: #22c55e; /* Default Green */
+            border-radius: 6px;
+            transition: width 0.5s ease, background 0.3s ease;
+        }
+        .credits {
+            margin-top: 30px;
+            padding-top: 20px; /* Add space above text */
+            border-top: 1px solid #e5e7eb; /* Add a separator line */
+            text-align: center;
+            color: #4b5563;
+            animation: fadeIn 1.5s ease-in-out;
+        }
+
+        .credits p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .team-names {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary); /* Uses your existing purple/blue */
+        }
+
+        .divider {
+            color: #cbd5e1; /* Light grey dot */
+        }
+
+        .copyright {
+            font-size: 0.75rem !important;
+            margin-top: 15px !important;
+            font-weight: 400 !important;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Turnbuckle Analyzer</h2>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display:inline-flex; align-items:center; cursor:pointer;">
+                <span style="margin-right: 10px; font-weight:bold;">Mode:</span>
+                <select id="mode-switch" onchange="toggleMode()" style="padding: 5px; border-radius: 8px;">
+                    <option value="analysis">Analysis (Check Strength)</option>
+                    <option value="design">Design (Find Size)</option>
+                </select>
+            </label>
+        </div>
+        
+        <div class="input-group">
+            <label>Rod Diameter (mm)</label>
+            <input type="number" id="dia" placeholder="Diameter in mm">
+        </div>
+
+        
+
+        <div class="input-group">
+            <label>Thread Pitch (mm)</label>
+            <input type="number" id="pitch" placeholder="e.g. 2.5" step="0.1">
+        </div>
+
+        <div class="input-group">
+            <label>Material Preset</label>
+            <select id="material-select" onchange="updateYield()" style="width: 100%; padding: 12px; border-radius: 12px; border: 2px solid #e5e7eb;">
+                <option value="">-- Select Material --</option>
+                <option value="ss304">Stainless Steel 304</option>
+                <option value="alloy_steel">Alloy Steel</option>
+                <option value="aluminum_6061">Aluminum 6061</option>
+                <option value="mild_steel">Mild Steel</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Yield Strength (MPa)</label>
+            <input type="number" id="yield" placeholder="Material Yield Stress">
+        </div>
+
+        <div class="diagram-container">
+            <div class="rod left-rod"></div>
+            <div class="coupler">
+                <div class="failure-zone" id="fail-point"></div>
+            </div>
+            <div class="rod right-rod"></div>
+        </div>
+
+        <div class="input-group">
+            <label>Applied Load (Newtons)</label>
+            <input type="number" id="load" placeholder="e.g. 10000">
+        </div>
+
+        <button onclick="sendData()">Calculate Stress Limit</button>
+        
+        <div id="result-box">
+            <span id="status-badge" class="badge">READY</span>
+            <div class="meter-container">
+                <div class="meter-fill" id="stress-meter"></div>
+            </div>
+            <p id="percentage-text" style="font-size: 0.8rem; color: #6b7280; margin-top: 5px;">0% Capacity</p>
+            <p id="result">Waiting for input...</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="credits">
+            <p>Developed by:</p>
+            <div class="team-names">
+                <span>Arshan Khan</span>
+                <span class="divider">•</span>
+                <span>Malhar Joshi</span>
+                <span class="divider">•</span>
+                <span>Deepak Kushwaha</span>
+            </div>
+            <p class="copyright">© 2026 AeroCalc Systems</p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        // 1. Material Database
+        const materials = {
+            "ss304": { name: "Stainless Steel 304", yield: 215 },
+            "alloy_steel": { name: "Alloy Steel (Grade 8.8)", yield: 640 },
+            "aluminum_6061": { name: "Aluminum 6061-T6", yield: 240 },
+            "mild_steel": { name: "Mild Steel (A36)", yield: 250 }
+        };
+
+        // 2. Function to auto-fill Yield Strength
+        function updateYield() {
+            const selection = document.getElementById('material-select').value;
+            if (selection && materials[selection]) {
+                document.getElementById('yield').value = materials[selection].yield;
+            }
+        }
+
+        // 3. NEW: Function to toggle between Analysis and Design modes
+        function toggleMode() {
+            const mode = document.getElementById('mode-switch').value;
+        
+            // We get the PARENT element (the div class="input-group") to hide the whole box
+            const diaGroup = document.getElementById('dia').closest('.input-group');
+            const pitchGroup = document.getElementById('pitch').closest('.input-group');
+            const btn = document.querySelector('button');
+
+            if (mode === 'design') {
+                diaGroup.style.display = 'none';   // Hide Diameter
+                pitchGroup.style.display = 'none'; // Hide Pitch
+                btn.innerText = "FIND REQUIRED SIZE";
+            } else {
+                diaGroup.style.display = 'block';  // Show Diameter
+                pitchGroup.style.display = 'block'; // Show Pitch
+                btn.innerText = "CALCULATE STRESS LIMIT";
+            }
+        }
+
+        // 4. UPDATED: Main function to send data to Python
+        async function sendData() {
+            const mode = document.getElementById('mode-switch').value;
+            const resText = document.getElementById('result');
+            const badge = document.getElementById('status-badge');
+        
+            // Reset Visuals
+            resText.innerText = "Processing...";
+            if(badge) badge.className = "badge"; 
+        
+            // Prepare data object
+            let payload = {
+                mode: mode,
+                yield_strength: document.getElementById('yield').value,
+                load: document.getElementById('load').value
+            };
+
+            // Only add diameter/pitch if in Analysis mode
+            if (mode === 'analysis') {
+                payload.diameter = document.getElementById('dia').value;
+                payload.pitch = document.getElementById('pitch').value;
+            }
+
+            try {
+                const response = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                // --- SCENARIO A: DESIGN MODE (Finding a Bolt) ---
+                if (mode === 'design') {
+                    resText.innerHTML = `<span style="font-size: 1.4rem; color: #4f46e5">${result.result_text}</span><br>
+                                        <span style="font-size: 0.9rem; color: #6b7280">${result.details}</span>`;
+                
+                    // Clear the status badge and meter since they don't apply
+                    if(badge) badge.style.display = 'none';
+                    const meter = document.getElementById('stress-meter');
+                    if(meter) meter.style.width = '0%';
+                } 
+            
+                // --- SCENARIO B: ANALYSIS MODE (Checking Strength) ---
+                else {
+                    if(badge) badge.style.display = 'inline-block'; // Bring badge back
+                
+                    const failLoad = result.failure_load;
+                    const appliedLoad = parseFloat(payload.load);
+
+                    resText.innerHTML = `Failure Load: <span style="color:#4f46e5">${failLoad} ${result.unit}</span>`;
+
+                    // Badge & Meter Logic
+                    if (appliedLoad) {
+                        const percentage = (appliedLoad / failLoad) * 100;
+                        const displayWidth = percentage > 100 ? 100 : percentage;
+                    
+                        // Update Meter
+                        const meter = document.getElementById('stress-meter');
+                        const percentText = document.getElementById('percentage-text');
+                    
+                        if(meter) {
+                            meter.style.width = displayWidth + "%";
+                            // Color Logic
+                            if (percentage < 60) meter.style.background = "#22c55e";      // Green
+                            else if (percentage < 90) meter.style.background = "#eab308"; // Yellow
+                            else meter.style.background = "#ef4444";                      // Red
+                        }
+                        if(percentText) percentText.innerText = percentage.toFixed(1) + "% of Capacity";
+
+                        // Update Badge
+                        if (failLoad > appliedLoad) {
+                            badge.innerText = "✓ SAFE DESIGN";
+                            badge.className = "badge badge-safe";
+                        } else {
+                            badge.innerText = "⚠ CRITICAL FAILURE";
+                            badge.className = "badge badge-danger";
+                            document.getElementById('fail-point').classList.add('is-failing');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                resText.innerText = "Error calculating. Check inputs.";
+            }
+        }
+    </script>
+</body>
+</html>
